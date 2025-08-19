@@ -1,4 +1,5 @@
 # SPDX-License-Identifier: LGPL-2.1-or-later
+from typing import Iterable
 
 from mkosi.context import Context
 from mkosi.distributions import centos, join_mirror
@@ -22,13 +23,14 @@ class Installer(centos.Installer):
         )
 
     @classmethod
-    def repository_variants(cls, context: Context, repo: str) -> list[RpmRepository]:
+    def repository_variants(cls, context: Context, repo: str) -> Iterable[RpmRepository]:
+        if context.config.local_mirror:
+            yield RpmRepository(repo, f"baseurl={context.config.local_mirror}", cls.gpgurls(context))
         if context.config.mirror:
             url = f"baseurl={join_mirror(context.config.mirror, f'$releasever/{repo}/$basearch/os')}"
         else:
             url = f"mirrorlist=https://mirrors.rockylinux.org/mirrorlist?arch=$basearch&repo={repo}-$releasever"
-
-        return [RpmRepository(repo, url, cls.gpgurls(context))]
+        yield RpmRepository(repo, url, cls.gpgurls(context))
 
     @classmethod
     def sig_repositories(cls, context: Context) -> list[RpmRepository]:
